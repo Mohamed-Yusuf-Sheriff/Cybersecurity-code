@@ -1,0 +1,170 @@
+📁 Folder Structure
+linux-priv-esc-toolkit/
+├── main.py
+├── modules/
+│   ├── system_info.py
+│   ├── suid_scan.py
+│   ├── permission_scan.py
+│   ├── sudo_check.py
+│   ├── cron_scan.py
+│   └── kernel_check.py
+└── reports/
+    └── scan_report.txt
+🟢 1. system_info.py
+import os
+import platform
+
+def get_system_info():
+    info = {}
+
+    info["User"] = os.getenv("USER")
+    info["Home Directory"] = os.path.expanduser("~")
+    info["OS"] = platform.system()
+    info["Kernel"] = platform.release()
+
+    return info
+🟢 2. suid_scan.py
+import subprocess
+
+def scan_suid():
+    try:
+        result = subprocess.check_output(
+            "find / -perm -4000 -type f 2>/dev/null",
+            shell=True,
+            text=True
+        )
+        return result.split("\n")[:10]  # limit output
+    except:
+        return []
+🟢 3. permission_scan.py
+import subprocess
+
+def scan_world_writable():
+    try:
+        result = subprocess.check_output(
+            "find / -type f -perm -002 2>/dev/null",
+            shell=True,
+            text=True
+        )
+        return result.split("\n")[:10]
+    except:
+        return []
+🟢 4. sudo_check.py
+import subprocess
+
+def check_sudo():
+    try:
+        result = subprocess.check_output(
+            "sudo -l",
+            shell=True,
+            text=True
+        )
+        return result
+    except:
+        return "No sudo access or permission denied"
+🟢 5. cron_scan.py
+import subprocess
+
+def scan_cron():
+    try:
+        result = subprocess.check_output(
+            "ls -la /etc/cron*",
+            shell=True,
+            text=True
+        )
+        return result
+    except:
+        return "Unable to access cron jobs"
+🟢 6. kernel_check.py
+import platform
+
+def get_kernel():
+    return platform.release()
+🟢 7. main.py (IMPORTANT)
+from modules.system_info import get_system_info
+from modules.suid_scan import scan_suid
+from modules.permission_scan import scan_world_writable
+from modules.sudo_check import check_sudo
+from modules.cron_scan import scan_cron
+from modules.kernel_check import get_kernel
+
+def main():
+    print("\n=== Linux Privilege Escalation Audit Tool ===\n")
+
+    report = []
+
+    # -------------------------
+    # System Info
+    # -------------------------
+    info = get_system_info()
+    print("System Info:")
+    for k, v in info.items():
+        print(f"{k}: {v}")
+        report.append(f"{k}: {v}\n")
+
+    report.append("\n")
+
+    # -------------------------
+    # SUID Scan
+    # -------------------------
+    print("\nScanning SUID Binaries...")
+    suid_files = scan_suid()
+
+    report.append("SUID Binaries:\n")
+    for f in suid_files:
+        if f:
+            print(f)
+            report.append(f + "\n")
+
+    report.append("\n")
+
+    # -------------------------
+    # World Writable Scan
+    # -------------------------
+    print("\nScanning World-Writable Files...")
+    writable = scan_world_writable()
+
+    report.append("World Writable Files:\n")
+    for f in writable:
+        if f:
+            print(f)
+            report.append(f + "\n")
+
+    report.append("\n")
+
+    # -------------------------
+    # Sudo Check
+    # -------------------------
+    print("\nChecking Sudo Permissions...")
+    sudo = check_sudo()
+    print(sudo)
+    report.append("Sudo Configuration:\n" + sudo + "\n")
+
+    # -------------------------
+    # Cron Scan
+    # -------------------------
+    print("\nChecking Cron Jobs...")
+    cron = scan_cron()
+    print(cron)
+    report.append("Cron Jobs:\n" + cron + "\n")
+
+    # -------------------------
+    # Kernel Info
+    # -------------------------
+    kernel = get_kernel()
+    print("\nKernel Version:", kernel)
+    report.append(f"\nKernel Version: {kernel}\n")
+
+    # -------------------------
+    # Save Report
+    # -------------------------
+    with open("reports/scan_report.txt", "w") as f:
+        f.writelines(report)
+
+    print("\nReport saved: reports/scan_report.txt")
+
+if __name__ == "__main__":
+    main()
+🟢 How to Run
+cd linux-priv-esc-toolkit
+python3 main.py
