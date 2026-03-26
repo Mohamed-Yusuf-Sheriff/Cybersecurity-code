@@ -1,1 +1,150 @@
-# Cybersecurity-code
+1) Secure File Transfer Monitoring System
+   
+config.py
+SENSITIVE_DIRECTORIES = [
+    "./monitored_folder/sensitive"
+]
+
+LOG_FILE = "logs/file_activity.log"
+hash_utils.py
+import hashlib
+
+def calculate_hash(file_path):
+    sha256 = hashlib.sha256()
+    try:
+        with open(file_path, "rb") as f:
+            while True:
+                chunk = f.read(4096)
+                if not chunk:
+                    break
+                sha256.update(chunk)
+        return sha256.hexdigest()
+    except FileNotFoundError:
+        return None
+logger.py
+import logging
+from config import LOG_FILE
+
+logging.basicConfig(
+    filename=LOG_FILE,
+    level=logging.INFO,
+    format="%(asctime)s - %(message)s"
+)
+
+def log_event(message):
+    logging.info(message)
+monitor.py
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
+import time
+
+from hash_utils import calculate_hash
+from logger import log_event
+from config import SENSITIVE_DIRECTORIES
+
+class FileMonitor(FileSystemEventHandler):
+
+    def on_modified(self, event):
+        if not event.is_directory:
+            file_hash = calculate_hash(event.src_path)
+            log_event(f"MODIFIED: {event.src_path} | HASH: {file_hash}")
+
+    def on_created(self, event):
+        if not event.is_directory:
+            log_event(f"CREATED: {event.src_path}")
+            self.check_sensitive(event.src_path)
+
+    def on_deleted(self, event):
+        log_event(f"DELETED: {event.src_path}")
+
+    def on_moved(self, event):
+        log_event(f"MOVED: {event.src_path} -> {event.dest_path}")
+        self.check_sensitive(event.dest_path)
+
+    def check_sensitive(self, path):
+        for sensitive in SENSITIVE_DIRECTORIES:
+            if path.startswith(sensitive):
+                log_event(f"ALERT: Sensitive file accessed -> {path}")
+                print(f"[!] ALERT: Sensitive file accessed -> {path}")
+
+if __name__ == "__main__":
+    path = "./monitored_folder"
+    event_handler = FileMonitor()
+    observer = Observer()
+    observer.schedule(event_handler, path, recursive=True)
+    observer.start()
+
+    print("Monitoring started... Press CTRL+C to stop")
+
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        observer.stop()
+    observer.join()
+
+    
+Folder layout for this project
+secure-file-monitor/
+├── config.py
+├── hash_utils.py
+├── logger.py
+├── monitor.py
+├── logs/
+├── monitored_folder/
+│   └── sensitive/
+└── report/
+    └── screenshots/
+
+    
+2) Password Strength Analyzer
+strength_analyzer.py
+import math
+import string
+
+def analyze_password(password):
+    length = len(password)
+
+    has_upper = any(c.isupper() for c in password)
+    has_lower = any(c.islower() for c in password)
+    has_digit = any(c.isdigit() for c in password)
+    has_symbol = any(c in string.punctuation for c in password)
+
+    charset_size = 0
+    if has_lower:
+        charset_size += 26
+    if has_upper:
+        charset_size += 26
+    if has_digit:
+        charset_size += 10
+    if has_symbol:
+        charset_size += 32
+
+    entropy = 0
+    if charset_size > 0:
+        entropy = length * math.log2(charset_size)
+
+    if entropy < 28:
+        rating = "Weak"
+    elif entropy < 50:
+        rating = "Moderate"
+    else:
+        rating = "Strong"
+
+    return {
+        "Length": length,
+        "Uppercase": has_upper,
+        "Lowercase": has_lower,
+        "Digits": has_digit,
+        "Symbols": has_symbol,
+        "Entropy": round(entropy, 2),
+        "Rating": rating
+    }
+Minimal runner for the analyzer
+from strength_analyzer import analyze_password
+
+pw = input("Enter a password to analyze: ")
+result = analyze_password(pw)
+
+for k, v in result.items():
+    print(f"{k}: {v}")
