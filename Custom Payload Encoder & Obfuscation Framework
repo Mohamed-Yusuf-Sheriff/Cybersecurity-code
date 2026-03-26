@@ -1,0 +1,136 @@
+📁 Folder Structure
+payload-framework/
+├── main.py
+├── payloads/
+│   └── sample_payload.txt
+├── encoder/
+│   ├── base64_encoder.py
+│   ├── xor_encoder.py
+│   └── rot13_encoder.py
+├── obfuscator/
+│   └── string_obfuscator.py
+├── detection/
+│   └── signature_detector.py
+└── reports/
+    └── results.txt
+🟢 1. sample_payload.txt
+cmd.exe /c whoami
+🟢 2. base64_encoder.py
+import base64
+
+def encode(payload):
+    encoded = base64.b64encode(payload.encode())
+    return encoded.decode()
+🟢 3. xor_encoder.py
+def encode(payload, key=3):
+    result = ""
+    for char in payload:
+        result += chr(ord(char) ^ key)
+    return result
+🟢 4. rot13_encoder.py
+def encode(payload):
+    result = ""
+    for char in payload:
+        if char.isalpha():
+            shift = 13
+            base = ord('a') if char.islower() else ord('A')
+            result += chr((ord(char) - base + shift) % 26 + base)
+        else:
+            result += char
+    return result
+🟢 5. string_obfuscator.py
+def obfuscate(payload):
+    return "_".join(payload)
+🟢 6. signature_detector.py
+def detect(payload):
+    signatures = ["cmd", "powershell", "whoami", "shell"]
+
+    for sig in signatures:
+        if sig in payload.lower():
+            return True
+    return False
+🟢 7. main.py
+from encoder.base64_encoder import encode as b64_encode
+from encoder.xor_encoder import encode as xor_encode
+from encoder.rot13_encoder import encode as rot13_encode
+from obfuscator.string_obfuscator import obfuscate
+from detection.signature_detector import detect
+
+
+def main():
+    report = []
+
+    # Read payload
+    with open("payloads/sample_payload.txt", "r") as f:
+        payload = f.read().strip()
+
+    print("Original Payload:", payload)
+
+    # Detection on original
+    if detect(payload):
+        print("Original: DETECTED")
+        report.append("Original Payload: DETECTED\n")
+    else:
+        print("Original: NOT DETECTED")
+        report.append("Original Payload: NOT DETECTED\n")
+
+    # Base64
+    b64_payload = b64_encode(payload)
+    print("\nBase64:", b64_payload)
+
+    if detect(b64_payload):
+        result = "DETECTED"
+    else:
+        result = "NOT DETECTED"
+
+    print("Base64:", result)
+    report.append(f"Base64 Payload: {result}\n")
+
+    # XOR
+    xor_payload = xor_encode(payload)
+    print("\nXOR:", xor_payload)
+
+    if detect(xor_payload):
+        result = "DETECTED"
+    else:
+        result = "NOT DETECTED"
+
+    print("XOR:", result)
+    report.append(f"XOR Payload: {result}\n")
+
+    # ROT13
+    rot13_payload = rot13_encode(payload)
+    print("\nROT13:", rot13_payload)
+
+    if detect(rot13_payload):
+        result = "DETECTED"
+    else:
+        result = "NOT DETECTED"
+
+    print("ROT13:", result)
+    report.append(f"ROT13 Payload: {result}\n")
+
+    # Obfuscation
+    obf_payload = obfuscate(payload)
+    print("\nObfuscated:", obf_payload)
+
+    if detect(obf_payload):
+        result = "DETECTED"
+    else:
+        result = "NOT DETECTED"
+
+    print("Obfuscated:", result)
+    report.append(f"Obfuscated Payload: {result}\n")
+
+    # Save report
+    with open("reports/results.txt", "w") as f:
+        f.writelines(report)
+
+    print("\nReport saved in reports/results.txt")
+
+
+if __name__ == "__main__":
+    main()
+🟢 How to Run
+cd payload-framework
+python3 main.py
